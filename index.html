@@ -25,28 +25,41 @@
     <button id="impulseBtn" disabled>💥 Импульс</button>
     <button id="resetBtn" disabled>🔄 Сброс</button>
     <div id="status">Статус: не подключено</div>
-    <p><b>При сбросе настроек насадка работает от пьезоэлемента с 10 мс импульса и 1000 мс паузы</b></p>
- <details>
-  <summary>📋 Информация об устройстве (нажмите, чтобы развернуть)</summary>
-    <div class="info-block">
-       <!-- <h3>📋 Информация об устройстве </h3>-->
-        <p><b>Производитель:</b> <span id="manufacturer">—</span></p>
-        <p><b>Серийный номер:</b> <span id="serial">—</span></p>
-        <p><b>Версия прошивки:</b> <span id="firmware">—</span></p>
-        <p><b>Версия насадки:</b> <span id="hardware">—</span></p>
-        <p><b>Версия ПО:</b> <span id="software">—</span></p>
-    </div>
-  </details>
-  <div class="info-block">
-    <h3>📊 Телеметрия лазера</h3>
-    <p><b>Состояние:</b> <span id="laser-state">—</span></p>
-    <p><b>Время импульса:</b> <span id="impulse-time">—</span> мс</p>
-    <p><b>Время паузы:</b> <span id="pause-time">—</span> мс</p>
-</div>
+
     <div class="info-block">
         <h3>🔋 Уровень заряда батареи</h3>
         <p><span class="battery" id="battery-level">—</span>%</p>
     </div>
+
+    <details>
+        <summary>📖 Инструкция по работе с приложением (нажмите, чтобы развернуть)</summary>
+        <div class="info-block">
+            <p><b>Лазерная насадка работает в 3 режимах:</b></p>
+            <ul>
+                <li>детектирование по пьезоэлементу;</li>
+                <li>ожидание команды (ручное моргание лазером);</li>
+                <li>детектирование по микрофону.</li>
+            </ul>
+        </div>
+    </details>
+
+  <div class="info-block">
+    <h3>📊 Телеметрия лазерной насадки</h3>
+    <p><b>Состояние:</b> <span id="laser-state">—</span></p>
+    <p><b>Текущее время импульса:</b> <span id="impulse-time">—</span> мс</p>
+    <p><b>Текущее время паузы:</b> <span id="pause-time">—</span> мс</p>
+</div>
+
+<details>
+    <summary>📋 Информация об устройстве (нажмите, чтобы развернуть)</summary>
+      <div class="info-block">
+          <p><b>Производитель:</b> <span id="manufacturer">—</span></p>
+          <p><b>Серийный номер:</b> <span id="serial">—</span></p>
+          <p><b>Версия прошивки:</b> <span id="firmware">—</span></p>
+          <p><b>Версия насадки:</b> <span id="hardware">—</span></p>
+          <p><b>Версия ПО:</b> <span id="software">—</span></p>
+      </div>
+    </details>
 
     <script src="script.js"></script>
 </body>
