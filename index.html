@@ -24,7 +24,7 @@
     <button id="connectBtn">Подключить</button>
     <button id="impulseBtn" disabled>💥 Импульс</button>
     <div id="status">Статус: не подключено</div>
-
+    <p><b>При сбросе настроек насадка работает от пьезоэлемента с 10 мс импульса и 1000 мс паузы</b></p>
  <details>
   <summary>📋 Информация об устройстве (нажмите, чтобы развернуть)</summary>
     <div class="info-block">
@@ -36,7 +36,12 @@
         <p><b>Версия ПО:</b> <span id="software">—</span></p>
     </div>
   </details>
-
+  <div class="info-block">
+    <h3>📊 Телеметрия лазера</h3>
+    <p><b>Состояние:</b> <span id="laser-state">—</span></p>
+    <p><b>Время импульса:</b> <span id="impulse-time">—</span> мс</p>
+    <p><b>Время паузы:</b> <span id="pause-time">—</span> мс</p>
+</div>
     <div class="info-block">
         <h3>🔋 Уровень заряда батареи</h3>
         <p><span class="battery" id="battery-level">—</span>%</p>

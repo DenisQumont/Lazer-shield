@@ -27,6 +27,8 @@ const LASER_INPUT_UUID   = '78153469-6274-3432-9825-72538293bb02';
 // Резервный сервис для серийного номера (ESP32C3)
 const BACKUP_SERVICE_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
 const BACKUP_CHAR_UUID   = '0000ffe2-0000-1000-8000-00805f9b34fb';
+// характеристика для телеметрии
+const LASER_OUTPUT_UUID = '78153469-6274-3432-9825-72538293bb01'; // 
 
 // ---------- Глобальные переменные ----------
 let device = null;
@@ -155,22 +157,61 @@ async function subscribeBatteryNotifications() {
     }
 }
 
-// ---------- Лазерная характеристика (без изменений) ----------
+// ---------- Лазерная характеристика (управление + телеметрия) ----------
 async function initLaserCharacteristic() {
     try {
         const service = await server.getPrimaryService(LASER_SERVICE_UUID);
         console.log('Сервис найден:', LASER_SERVICE_UUID);
-        const char = await service.getCharacteristic(LASER_INPUT_UUID);
-        console.log('Характеристика найдена:', LASER_INPUT_UUID);
-        if (char.properties.write || char.properties.writeWithoutResponse) {
-            laserCharacteristic = char;
-            console.log('Характеристика готова к записи');
+
+        // ---- 1. Характеристика для отправки команд (INPUT) ----
+        const inputChar = await service.getCharacteristic(LASER_INPUT_UUID);
+        console.log('INPUT характеристика найдена:', LASER_INPUT_UUID);
+        if (inputChar.properties.write || inputChar.properties.writeWithoutResponse) {
+            laserCharacteristic = inputChar;
+            console.log('INPUT характеристика готова к записи');
         } else {
-            console.warn('Характеристика не поддерживает запись');
+            console.warn('INPUT характеристика не поддерживает запись');
             laserCharacteristic = null;
         }
+
+        // ---- 2. Характеристика для получения телеметрии (OUTPUT) ----
+        try {
+            const outputChar = await service.getCharacteristic(LASER_OUTPUT_UUID);
+            console.log('OUTPUT характеристика найдена:', LASER_OUTPUT_UUID);
+
+            if (outputChar.properties.notify) {
+                await outputChar.startNotifications();
+                outputChar.addEventListener('characteristicvaluechanged', (event) => {
+                    const value = event.target.value;
+                    if (value.byteLength === 5) {
+                        const data = new Uint8Array(value.buffer);
+                        const state = data[0];
+                        const impulseTime = data[1] | (data[2] << 8); // little-endian
+                        const pauseTime = data[3] | (data[4] << 8);   // little-endian
+
+                        // Обновляем элементы на странице
+                        document.getElementById('laser-state').textContent =
+                            state === 0x00 ? 'Ожидание команды' :
+                            state === 0x03 ? 'Работа от пьезоэлемента' :
+                            `0x${state.toString(16).padStart(2, '0')}`;
+                        document.getElementById('impulse-time').textContent = impulseTime;
+                        document.getElementById('pause-time').textContent = pauseTime;
+
+                        console.log('Телеметрия:', { state, impulseTime, pauseTime });
+                    } else {
+                        console.warn('Неверный размер данных телеметрии:', value.byteLength);
+                    }
+                });
+                console.log('Подписка на телеметрию активна');
+            } else {
+                console.warn('OUTPUT характеристика не поддерживает notify');
+            }
+        } catch (e) {
+            console.warn('Не удалось получить OUTPUT характеристику или подписаться:', e);
+        }
+
     } catch (e) {
-        console.error('Не удалось найти лазерный сервис/характеристику:', e);
+        console.error('Не удалось найти лазерный сервис:', e);
         laserCharacteristic = null;
     }
 }
