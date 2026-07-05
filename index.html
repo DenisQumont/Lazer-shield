@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <title>Управление лазерной насадкой</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 16px; max-width: 600px; margin: auto; background: #f8f9fa; }
+        h1 { font-size: 1.8rem; }
+        button { font-size: 1.2rem; padding: 12px 24px; margin: 8px 4px; border: none; border-radius: 8px; background: #007aff; color: white; cursor: pointer; }
+        button:disabled { opacity: 0.5; }
+        #status { margin: 12px 0; padding: 8px; background: #e9ecef; border-radius: 6px; }
+        .info-block { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 16px; }
+        .info-block p { margin: 6px 0; }
+        .battery { font-weight: bold; color: #28a745; }
+        #impulseBtn { background: #ff3b30; }
+        #impulseBtn:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+    <h1>🔦 Управление лазерной насадкой</h1>
+    <button id="connectBtn">Подключить</button>
+    <button id="impulseBtn" disabled>💥 Импульс</button>
+    <div id="status">Статус: не подключено</div>
+
+    <div class="info-block">
+        <h3>📋 Информация об устройстве </h3>
+        <p><b>Производитель:</b> <span id="manufacturer">—</span></p>
+        <p><b>Серийный номер:</b> <span id="serial">—</span></p>
+        <p><b>Версия прошивки:</b> <span id="firmware">—</span></p>
+        <p><b>Версия насадки:</b> <span id="hardware">—</span></p>
+        <p><b>Версия ПО:</b> <span id="software">—</span></p>
+    </div>
+
+    <div class="info-block">
+        <h3>🔋 Уровень заряда батареи</h3>
+        <p><span class="battery" id="battery-level">—</span>%</p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
