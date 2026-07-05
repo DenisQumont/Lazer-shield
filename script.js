@@ -26,7 +26,7 @@ const LASER_INPUT_UUID   = '78153469-6274-3432-9825-72538293bb02';
 
 // Резервный сервис для серийного номера (ESP32C3)
 const BACKUP_SERVICE_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
-const BACKUP_CHAR_UUID   = '0000ffe1-0000-1000-8000-00805f9b34fb';
+const BACKUP_CHAR_UUID   = '0000ffe2-0000-1000-8000-00805f9b34fb';
 
 // ---------- Глобальные переменные ----------
 let device = null;
