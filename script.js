@@ -37,10 +37,12 @@ let laserCharacteristic = null;
 
 const connectBtn = document.getElementById('connectBtn');
 const impulseBtn = document.getElementById('impulseBtn');
+const resetBtn = document.getElementById('resetBtn');
 const statusDiv = document.getElementById('status');
 
 connectBtn.addEventListener('click', connectDevice);
 impulseBtn.addEventListener('click', sendImpulse);
+resetBtn.addEventListener('click', sendReset);
 
 // ---------- Подключение ----------
 async function connectDevice() {
@@ -72,8 +74,10 @@ async function connectDevice() {
 
         if (laserCharacteristic) {
             impulseBtn.disabled = false;
+            resetBtn.disabled = false;
         } else {
             impulseBtn.disabled = true;
+            resetBtn.disabled = true;
             statusDiv.textContent = '⚠️ Управляющая характеристика не найдена';
         }
 
@@ -82,6 +86,7 @@ async function connectDevice() {
         statusDiv.textContent = '❌ Ошибка: ' + error.message;
         connectBtn.disabled = false;
         impulseBtn.disabled = true;
+        resetBtn.disabled = true;
     }
 }
 
@@ -232,5 +237,24 @@ async function sendImpulse() {
         console.error('Ошибка записи:', error);
         alert('Ошибка при отправке: ' + error.message);
         statusDiv.textContent = '❌ Ошибка отправки';
+    }
+}
+
+// ---------- Сброс настроек ----------
+async function sendReset() {
+    if (!laserCharacteristic) {
+        alert('Характеристика не инициализирована. Подключитесь заново.');
+        return;
+    }
+
+    try {
+        const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x00]); // все нули
+        await laserCharacteristic.writeValue(data);
+        statusDiv.textContent = '🔄 Сброс отправлен!';
+        console.log('Команда сброса отправлена:', data);
+    } catch (error) {
+        console.error('Ошибка записи сброса:', error);
+        alert('Ошибка при отправке сброса: ' + error.message);
+        statusDiv.textContent = '❌ Ошибка сброса';
     }
 }
