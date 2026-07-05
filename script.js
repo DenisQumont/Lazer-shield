@@ -191,7 +191,7 @@ async function initLaserCharacteristic() {
 
                         // Обновляем элементы на странице
                         document.getElementById('laser-state').textContent =
-                            state === 0x00 ? 'Ожидание команды' :
+                            state === 0x07 ? 'Ожидание команды' :
                             state === 0x03 ? 'Работа от пьезоэлемента' :
                             `0x${state.toString(16).padStart(2, '0')}`;
                         document.getElementById('impulse-time').textContent = impulseTime;
