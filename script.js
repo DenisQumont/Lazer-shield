@@ -5,7 +5,6 @@ if ('serviceWorker' in navigator) {
         .catch(err => console.warn('SW registration failed:', err));
 }
 
-
 // ---------- UUID ----------
 // DIS
 const DIS_SERVICE = '0000180a-0000-1000-8000-00805f9b34fb';
@@ -25,10 +24,14 @@ const BATTERY_CHAR = '00002a19-0000-1000-8000-00805f9b34fb';
 const LASER_SERVICE_UUID = '66375178-6231-3937-1258-432199739bcc';
 const LASER_INPUT_UUID   = '78153469-6274-3432-9825-72538293bb02';
 
+// Резервный сервис для серийного номера (ESP32C3)
+const BACKUP_SERVICE_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+const BACKUP_CHAR_UUID   = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
 // ---------- Глобальные переменные ----------
 let device = null;
 let server = null;
-let laserCharacteristic = null;  // характеристика для записи
+let laserCharacteristic = null;
 
 const connectBtn = document.getElementById('connectBtn');
 const impulseBtn = document.getElementById('impulseBtn');
@@ -45,7 +48,8 @@ async function connectDevice() {
             optionalServices: [
                 DIS_SERVICE,
                 BATTERY_SERVICE,
-                LASER_SERVICE_UUID   // добавляем наш сервис
+                LASER_SERVICE_UUID,
+                BACKUP_SERVICE_UUID   // добавляем резервный сервис
             ]
         });
 
@@ -54,7 +58,7 @@ async function connectDevice() {
         statusDiv.textContent = `✅ Подключено к ${device.name || 'устройству'}`;
         connectBtn.disabled = true;
 
-        // 1. Читаем DIS
+        // 1. Читаем DIS (с резервом для серийного номера)
         await readDIS();
 
         // 2. Читаем BAS
@@ -64,7 +68,6 @@ async function connectDevice() {
         // 3. Инициализируем управляющую характеристику
         await initLaserCharacteristic();
 
-        // Если характеристика найдена – активируем кнопку
         if (laserCharacteristic) {
             impulseBtn.disabled = false;
         } else {
@@ -80,7 +83,7 @@ async function connectDevice() {
     }
 }
 
-// ---------- DIS ----------
+// ---------- DIS с резервным чтением серийного номера ----------
 async function readDIS() {
     try {
         const service = await server.getPrimaryService(DIS_SERVICE);
@@ -91,15 +94,36 @@ async function readDIS() {
                 const text = new TextDecoder('utf-8').decode(value);
                 document.getElementById(key).textContent = text || '—';
             } catch (e) {
-                console.warn(`DIS ${key} не найдена`);
+                console.warn(`DIS ${key} не найдена или ошибка чтения`);
+                // Если это серийный номер – пробуем резерв
+                if (key === 'serial') {
+                    await readSerialFromBackup();
+                }
             }
         }
     } catch (e) {
         console.warn('Устройство не поддерживает DIS');
+        // Если DIS-сервис отсутствует – тоже пробуем резерв
+        await readSerialFromBackup();
     }
 }
 
-// ---------- BAS ----------
+// ---------- Чтение серийного номера из резервного сервиса ----------
+async function readSerialFromBackup() {
+    try {
+        const service = await server.getPrimaryService(BACKUP_SERVICE_UUID);
+        const char = await service.getCharacteristic(BACKUP_CHAR_UUID);
+        const value = await char.readValue();
+        const text = new TextDecoder('utf-8').decode(value);
+        document.getElementById('serial').textContent = text || '—';
+        console.log('Серийный номер получен из резервного сервиса:', text);
+    } catch (e) {
+        console.warn('Резервный сервис для серийного номера не доступен');
+        document.getElementById('serial').textContent = '—';
+    }
+}
+
+// ---------- BAS (без изменений) ----------
 async function readBattery() {
     try {
         const service = await server.getPrimaryService(BATTERY_SERVICE);
@@ -131,18 +155,13 @@ async function subscribeBatteryNotifications() {
     }
 }
 
-// ---------- Лазерная характеристика (управление) ----------
+// ---------- Лазерная характеристика (без изменений) ----------
 async function initLaserCharacteristic() {
     try {
-        // Пытаемся получить сервис
         const service = await server.getPrimaryService(LASER_SERVICE_UUID);
         console.log('Сервис найден:', LASER_SERVICE_UUID);
-
-        // Пытаемся получить характеристику
         const char = await service.getCharacteristic(LASER_INPUT_UUID);
         console.log('Характеристика найдена:', LASER_INPUT_UUID);
-
-        // Проверяем, можно ли писать
         if (char.properties.write || char.properties.writeWithoutResponse) {
             laserCharacteristic = char;
             console.log('Характеристика готова к записи');
@@ -156,7 +175,7 @@ async function initLaserCharacteristic() {
     }
 }
 
-// ---------- Отправка импульса ----------
+// ---------- Отправка импульса (без изменений) ----------
 async function sendImpulse() {
     if (!laserCharacteristic) {
         alert('Характеристика не инициализирована. Подключитесь заново.');
@@ -164,7 +183,6 @@ async function sendImpulse() {
     }
 
     try {
-        // Команда: 0x02 0x00 0x00 0x00 0x00
         const data = new Uint8Array([0x02, 0x00, 0x00, 0x00, 0x00]);
         await laserCharacteristic.writeValue(data);
         statusDiv.textContent = '💥 Импульс отправлен!';
