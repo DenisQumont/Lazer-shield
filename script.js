@@ -1,3 +1,11 @@
+// Регистрация Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/Lazer-shield/sw.js')
+        .then(() => console.log('SW registered'))
+        .catch(err => console.warn('SW registration failed:', err));
+}
+
+
 // ---------- UUID ----------
 // DIS
 const DIS_SERVICE = '0000180a-0000-1000-8000-00805f9b34fb';
