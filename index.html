@@ -19,6 +19,8 @@
         #impulseBtn:disabled { background: #ccc; }
         #piezoBtn { background: #ff9500; }
         #piezoBtn:disabled { background: #ccc; }
+        #microphoneBtn { background: #34c759; }
+        #microphoneBtn:disabled { background: #ccc; }
         #resetBtn { background: #007aff; }
         #resetBtn:disabled { background: #ccc; }
     </style>
@@ -28,6 +30,7 @@
     <button id="connectBtn">Подключить</button>
     <button id="impulseBtn" disabled>💥 Импульс</button>
     <button id="piezoBtn" disabled>📳 Пьезо</button>
+    <button id="microphoneBtn" disabled>🎤 Микрофон</button>
     <button id="resetBtn" disabled>🔄 Сброс</button>
     <div id="status">Статус: не подключено</div>
 
@@ -58,7 +61,7 @@
         </div>
     </details>
     &nbsp;&nbsp;
-  <div class="telemetry-block">
+  <div class="info-block">
     <h3>📊 Телеметрия лазерной насадки</h3>
     <p><b>Состояние:</b> <span id="laser-state">—</span></p>
     <p><b>Текущее время импульса:</b> <span id="impulse-time">—</span> мс</p>

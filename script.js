@@ -46,14 +46,16 @@ const LASER_OUTPUT_UUID = '78153469-6274-3432-9825-72538293bb01';
 let device = null;
 let server = null;
 let laserCharacteristic = null;
+let isListening = false; // состояние кнопки микрофона
 
 const connectBtn = document.getElementById('connectBtn');
 const impulseBtn = document.getElementById('impulseBtn');
 const piezoBtn = document.getElementById('piezoBtn');
+const microphoneBtn = document.getElementById('microphoneBtn');
 const resetBtn = document.getElementById('resetBtn');
 const statusDiv = document.getElementById('status');
 
-// Новые элементы
+// Элементы настройки
 const impulseTimeInput = document.getElementById('impulseTimeInput');
 const pauseTimeInput = document.getElementById('pauseTimeInput');
 const updateSettingsBtn = document.getElementById('updateSettingsBtn');
@@ -61,6 +63,7 @@ const updateSettingsBtn = document.getElementById('updateSettingsBtn');
 connectBtn.addEventListener('click', connectDevice);
 impulseBtn.addEventListener('click', sendImpulse);
 piezoBtn.addEventListener('click', sendPiezo);
+microphoneBtn.addEventListener('click', toggleMicrophone);
 resetBtn.addEventListener('click', sendReset);
 updateSettingsBtn.addEventListener('click', sendSettings);
 
@@ -95,11 +98,13 @@ async function connectDevice() {
         if (laserCharacteristic) {
             impulseBtn.disabled = false;
             piezoBtn.disabled = false;
+            microphoneBtn.disabled = false;
             resetBtn.disabled = false;
             updateSettingsBtn.disabled = false;
         } else {
             impulseBtn.disabled = true;
             piezoBtn.disabled = true;
+            microphoneBtn.disabled = true;
             resetBtn.disabled = true;
             updateSettingsBtn.disabled = true;
             statusDiv.textContent = '⚠️ Управляющая характеристика не найдена';
@@ -111,8 +116,14 @@ async function connectDevice() {
         connectBtn.disabled = false;
         impulseBtn.disabled = true;
         piezoBtn.disabled = true;
+        microphoneBtn.disabled = true;
         resetBtn.disabled = true;
         updateSettingsBtn.disabled = true;
+        // сбросить состояние микрофона
+        if (isListening) {
+            isListening = false;
+            microphoneBtn.textContent = '🎤 Микрофон';
+        }
     }
 }
 
@@ -154,7 +165,7 @@ async function readSerialFromBackup() {
     }
 }
 
-// ---------- BAS (без изменений) ----------
+// ---------- BAS ----------
 async function readBattery() {
     try {
         const service = await server.getPrimaryService(BATTERY_SERVICE);
@@ -279,6 +290,53 @@ async function sendPiezo() {
         console.error('Ошибка записи:', error);
         alert('Ошибка при отправке команды "Пьезо": ' + error.message);
         statusDiv.textContent = '❌ Ошибка отправки';
+    }
+}
+
+// ---------- Отправка команды микрофона (аналогично импульсу) ----------
+async function sendMicrophoneCommand() {
+    if (!laserCharacteristic) {
+        alert('Характеристика не инициализирована. Подключитесь заново.');
+        return;
+    }
+
+    try {
+        const data = new Uint8Array([0x02, 0x00, 0x00, 0x00, 0x00]);
+        await laserCharacteristic.writeValue(data);
+        statusDiv.textContent = '🎤 Команда микрофона отправлена!';
+        console.log('Команда отправлена:', data);
+    } catch (error) {
+        console.error('Ошибка записи:', error);
+        alert('Ошибка при отправке команды микрофона: ' + error.message);
+        statusDiv.textContent = '❌ Ошибка отправки';
+    }
+}
+
+// ---------- Переключение режима микрофона ----------
+function toggleMicrophone() {
+    if (isListening) {
+        // Выключение режима прослушивания
+        isListening = false;
+        microphoneBtn.textContent = '🎤 Микрофон';
+        // Включаем остальные кнопки (если характеристика есть)
+        if (laserCharacteristic) {
+            impulseBtn.disabled = false;
+            piezoBtn.disabled = false;
+            resetBtn.disabled = false;
+            updateSettingsBtn.disabled = false;
+        }
+        // Команду не отправляем
+    } else {
+        // Включение режима прослушивания
+        isListening = true;
+        microphoneBtn.textContent = '🎤 Прослушивание';
+        // Отключаем остальные кнопки
+        impulseBtn.disabled = true;
+        piezoBtn.disabled = true;
+        resetBtn.disabled = true;
+        updateSettingsBtn.disabled = true;
+        // Отправляем команду 0x02
+        sendMicrophoneCommand();
     }
 }
 
