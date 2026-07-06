@@ -1,3 +1,12 @@
+navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister(); // Удаляет все старые SW
+    }
+  }).then(function() {
+    window.location.reload(); // Перезагружает страницу
+  });
+  
+
 // Регистрация Service Worker
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/Lazer-shield/sw.js')
