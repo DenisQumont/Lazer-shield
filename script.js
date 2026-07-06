@@ -1,10 +1,14 @@
-navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for(let registration of registrations) {
-      registration.unregister();
-    }
-  }).then(function() {
-    window.location.reload();
-  });
+// Однократный сброс (по флагу в localStorage)
+if (!localStorage.getItem('sw_cleared')) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+            registration.unregister();
+        }
+    }).then(function() {
+        localStorage.setItem('sw_cleared', 'true');
+        window.location.reload();
+    });
+}
 
 // Регистрация Service Worker
 if ('serviceWorker' in navigator) {
