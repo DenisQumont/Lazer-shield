@@ -53,10 +53,16 @@ const piezoBtn = document.getElementById('piezoBtn');
 const resetBtn = document.getElementById('resetBtn');
 const statusDiv = document.getElementById('status');
 
+// Новые элементы
+const impulseTimeInput = document.getElementById('impulseTimeInput');
+const pauseTimeInput = document.getElementById('pauseTimeInput');
+const updateSettingsBtn = document.getElementById('updateSettingsBtn');
+
 connectBtn.addEventListener('click', connectDevice);
 impulseBtn.addEventListener('click', sendImpulse);
 piezoBtn.addEventListener('click', sendPiezo);
 resetBtn.addEventListener('click', sendReset);
+updateSettingsBtn.addEventListener('click', sendSettings);
 
 // ---------- Подключение ----------
 async function connectDevice() {
@@ -90,10 +96,12 @@ async function connectDevice() {
             impulseBtn.disabled = false;
             piezoBtn.disabled = false;
             resetBtn.disabled = false;
+            updateSettingsBtn.disabled = false;
         } else {
             impulseBtn.disabled = true;
             piezoBtn.disabled = true;
             resetBtn.disabled = true;
+            updateSettingsBtn.disabled = true;
             statusDiv.textContent = '⚠️ Управляющая характеристика не найдена';
         }
 
@@ -104,6 +112,7 @@ async function connectDevice() {
         impulseBtn.disabled = true;
         piezoBtn.disabled = true;
         resetBtn.disabled = true;
+        updateSettingsBtn.disabled = true;
     }
 }
 
@@ -289,5 +298,40 @@ async function sendReset() {
         console.error('Ошибка записи сброса:', error);
         alert('Ошибка при отправке сброса: ' + error.message);
         statusDiv.textContent = '❌ Ошибка сброса';
+    }
+}
+
+// ---------- Отправка настроек ----------
+async function sendSettings() {
+    if (!laserCharacteristic) {
+        alert('Характеристика не инициализирована. Подключитесь заново.');
+        return;
+    }
+
+    // Получаем и проверяем значения
+    let impulseTime = parseInt(impulseTimeInput.value.trim(), 10);
+    let pauseTime = parseInt(pauseTimeInput.value.trim(), 10);
+
+    if (isNaN(impulseTime) || isNaN(pauseTime) || impulseTime < 1 || impulseTime > 5000 || pauseTime < 1 || pauseTime > 5000) {
+        alert('Введите целые числа от 1 до 5000 для обоих полей.');
+        return;
+    }
+
+    // Формируем пакет (5 байт)
+    const data = new Uint8Array(5);
+    data[0] = 0x01;
+    data[1] = impulseTime & 0xFF;
+    data[2] = (impulseTime >> 8) & 0xFF;
+    data[3] = pauseTime & 0xFF;
+    data[4] = (pauseTime >> 8) & 0xFF;
+
+    try {
+        await laserCharacteristic.writeValue(data);
+        statusDiv.textContent = '✅ Настройки обновлены!';
+        console.log('Команда настроек отправлена:', data);
+    } catch (error) {
+        console.error('Ошибка записи настроек:', error);
+        alert('Ошибка при отправке настроек: ' + error.message);
+        statusDiv.textContent = '❌ Ошибка обновления настроек';
     }
 }
