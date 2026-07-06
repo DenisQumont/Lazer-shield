@@ -1,5 +1,3 @@
-
-
 // Регистрация Service Worker
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/Lazer-shield/sw.js')
@@ -37,6 +35,17 @@ let device = null;
 let server = null;
 let laserCharacteristic = null;
 let isListening = false; // состояние кнопки микрофона
+
+// Переменные для работы с микрофоном
+let audioContext = null;
+let analyser = null;
+let dataArray = null;
+let source = null;
+let stream = null;
+let animationFrame = null;
+let lastCommandTime = 0;
+const SOUND_THRESHOLD = 0.6;      // порог громкости (0-1)
+const COMMAND_COOLDOWN = 500;     // мс между отправками
 
 const connectBtn = document.getElementById('connectBtn');
 const impulseBtn = document.getElementById('impulseBtn');
@@ -111,6 +120,7 @@ async function connectDevice() {
         updateSettingsBtn.disabled = true;
         // сбросить состояние микрофона
         if (isListening) {
+            await stopListening();
             isListening = false;
             microphoneBtn.textContent = '🎤 Микрофон';
         }
@@ -286,7 +296,7 @@ async function sendPiezo() {
 // ---------- Отправка команды микрофона (аналогично импульсу) ----------
 async function sendMicrophoneCommand() {
     if (!laserCharacteristic) {
-        alert('Характеристика не инициализирована. Подключитесь заново.');
+        console.warn('Характеристика не инициализирована, команда не отправлена');
         return;
     }
 
@@ -297,9 +307,89 @@ async function sendMicrophoneCommand() {
         console.log('Команда отправлена:', data);
     } catch (error) {
         console.error('Ошибка записи:', error);
-        alert('Ошибка при отправке команды микрофона: ' + error.message);
-        statusDiv.textContent = '❌ Ошибка отправки';
+        statusDiv.textContent = '❌ Ошибка отправки команды микрофона';
     }
+}
+
+// ---------- Запуск прослушивания микрофона ----------
+async function startListening() {
+    try {
+        // Запрашиваем доступ к микрофону
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        dataArray = new Uint8Array(analyser.fftSize);
+
+        statusDiv.textContent = '🎤 Микрофон активен, ожидание звука...';
+
+        // Запускаем цикл анализа
+        function analyze() {
+            if (!isListening) return; // остановлено пользователем
+            analyser.getByteTimeDomainData(dataArray);
+            // Вычисляем RMS (среднеквадратичное) или просто максимум
+            let max = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const val = (dataArray[i] - 128) / 128; // нормализация от -1 до 1
+                const abs = Math.abs(val);
+                if (abs > max) max = abs;
+            }
+            // Если громкость превышает порог
+            if (max > SOUND_THRESHOLD) {
+                const now = Date.now();
+                if (now - lastCommandTime > COMMAND_COOLDOWN) {
+                    lastCommandTime = now;
+                    sendMicrophoneCommand();
+                }
+            }
+            // Продолжаем анализ
+            animationFrame = requestAnimationFrame(analyze);
+        }
+        analyze();
+
+        console.log('Микрофон запущен');
+    } catch (error) {
+        console.error('Ошибка доступа к микрофону:', error);
+        alert('Не удалось получить доступ к микрофону. Разрешите доступ и попробуйте снова.');
+        // Отключаем режим прослушивания
+        await stopListening();
+        isListening = false;
+        microphoneBtn.textContent = '🎤 Микрофон';
+        // Разблокируем остальные кнопки (если характеристика есть)
+        if (laserCharacteristic) {
+            impulseBtn.disabled = false;
+            piezoBtn.disabled = false;
+            resetBtn.disabled = false;
+            updateSettingsBtn.disabled = false;
+        }
+        statusDiv.textContent = '❌ Ошибка доступа к микрофону';
+    }
+}
+
+// ---------- Остановка прослушивания микрофона ----------
+async function stopListening() {
+    // Останавливаем цикл анализа
+    if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+    }
+    // Останавливаем аудиопоток
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    // Закрываем аудиоконтекст
+    if (audioContext) {
+        await audioContext.close();
+        audioContext = null;
+    }
+    analyser = null;
+    source = null;
+    dataArray = null;
+    console.log('Микрофон остановлен');
+    statusDiv.textContent = '🎤 Микрофон отключён';
 }
 
 // ---------- Переключение режима микрофона ----------
@@ -315,7 +405,8 @@ function toggleMicrophone() {
             resetBtn.disabled = false;
             updateSettingsBtn.disabled = false;
         }
-        // Команду не отправляем
+        // Останавливаем микрофон
+        stopListening();
     } else {
         // Включение режима прослушивания
         isListening = true;
@@ -325,8 +416,10 @@ function toggleMicrophone() {
         piezoBtn.disabled = true;
         resetBtn.disabled = true;
         updateSettingsBtn.disabled = true;
-        // Отправляем команду 0x02
+        // Отправляем команду 0x02 (один раз при старте)
         sendMicrophoneCommand();
+        // Запускаем микрофон
+        startListening();
     }
 }
 
