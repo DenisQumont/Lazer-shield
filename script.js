@@ -1,11 +1,10 @@
 navigator.serviceWorker.getRegistrations().then(function(registrations) {
     for(let registration of registrations) {
-      registration.unregister(); // Удаляет все старые SW
+      registration.unregister();
     }
   }).then(function() {
-    window.location.reload(); // Перезагружает страницу
+    window.location.reload();
   });
-  
 
 // Регистрация Service Worker
 if ('serviceWorker' in navigator) {
@@ -37,7 +36,7 @@ const LASER_INPUT_UUID   = '78153469-6274-3432-9825-72538293bb02';
 const BACKUP_SERVICE_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
 const BACKUP_CHAR_UUID   = '0000ffe2-0000-1000-8000-00805f9b34fb';
 // характеристика для телеметрии
-const LASER_OUTPUT_UUID = '78153469-6274-3432-9825-72538293bb01'; // 
+const LASER_OUTPUT_UUID = '78153469-6274-3432-9825-72538293bb01';
 
 // ---------- Глобальные переменные ----------
 let device = null;
@@ -46,11 +45,13 @@ let laserCharacteristic = null;
 
 const connectBtn = document.getElementById('connectBtn');
 const impulseBtn = document.getElementById('impulseBtn');
+const piezoBtn = document.getElementById('piezoBtn');
 const resetBtn = document.getElementById('resetBtn');
 const statusDiv = document.getElementById('status');
 
 connectBtn.addEventListener('click', connectDevice);
 impulseBtn.addEventListener('click', sendImpulse);
+piezoBtn.addEventListener('click', sendPiezo);
 resetBtn.addEventListener('click', sendReset);
 
 // ---------- Подключение ----------
@@ -62,7 +63,7 @@ async function connectDevice() {
                 DIS_SERVICE,
                 BATTERY_SERVICE,
                 LASER_SERVICE_UUID,
-                BACKUP_SERVICE_UUID   // добавляем резервный сервис
+                BACKUP_SERVICE_UUID
             ]
         });
 
@@ -83,9 +84,11 @@ async function connectDevice() {
 
         if (laserCharacteristic) {
             impulseBtn.disabled = false;
+            piezoBtn.disabled = false;
             resetBtn.disabled = false;
         } else {
             impulseBtn.disabled = true;
+            piezoBtn.disabled = true;
             resetBtn.disabled = true;
             statusDiv.textContent = '⚠️ Управляющая характеристика не найдена';
         }
@@ -95,6 +98,7 @@ async function connectDevice() {
         statusDiv.textContent = '❌ Ошибка: ' + error.message;
         connectBtn.disabled = false;
         impulseBtn.disabled = true;
+        piezoBtn.disabled = true;
         resetBtn.disabled = true;
     }
 }
@@ -111,7 +115,6 @@ async function readDIS() {
                 document.getElementById(key).textContent = text || '—';
             } catch (e) {
                 console.warn(`DIS ${key} не найдена или ошибка чтения`);
-                // Если это серийный номер – пробуем резерв
                 if (key === 'serial') {
                     await readSerialFromBackup();
                 }
@@ -119,7 +122,6 @@ async function readDIS() {
         }
     } catch (e) {
         console.warn('Устройство не поддерживает DIS');
-        // Если DIS-сервис отсутствует – тоже пробуем резерв
         await readSerialFromBackup();
     }
 }
@@ -200,10 +202,9 @@ async function initLaserCharacteristic() {
                     if (value.byteLength === 5) {
                         const data = new Uint8Array(value.buffer);
                         const state = data[0];
-                        const impulseTime = data[1] | (data[2] << 8); // little-endian
-                        const pauseTime = data[3] | (data[4] << 8);   // little-endian
+                        const impulseTime = data[1] | (data[2] << 8);
+                        const pauseTime = data[3] | (data[4] << 8);
 
-                        // Обновляем элементы на странице
                         document.getElementById('laser-state').textContent =
                             state === 0x07 ? 'Ожидание команды' :
                             state === 0x03 ? 'Работа от пьезоэлемента' :
@@ -230,7 +231,7 @@ async function initLaserCharacteristic() {
     }
 }
 
-// ---------- Отправка импульса (без изменений) ----------
+// ---------- Отправка импульса ----------
 async function sendImpulse() {
     if (!laserCharacteristic) {
         alert('Характеристика не инициализирована. Подключитесь заново.');
@@ -249,6 +250,25 @@ async function sendImpulse() {
     }
 }
 
+// ---------- Отправка команды "Пьезо" ----------
+async function sendPiezo() {
+    if (!laserCharacteristic) {
+        alert('Характеристика не инициализирована. Подключитесь заново.');
+        return;
+    }
+
+    try {
+        const data = new Uint8Array([0x03, 0x00, 0x00, 0x00, 0x00]);
+        await laserCharacteristic.writeValue(data);
+        statusDiv.textContent = '📳 Команда "Пьезо" отправлена!';
+        console.log('Команда отправлена:', data);
+    } catch (error) {
+        console.error('Ошибка записи:', error);
+        alert('Ошибка при отправке команды "Пьезо": ' + error.message);
+        statusDiv.textContent = '❌ Ошибка отправки';
+    }
+}
+
 // ---------- Сброс настроек ----------
 async function sendReset() {
     if (!laserCharacteristic) {
@@ -257,7 +277,7 @@ async function sendReset() {
     }
 
     try {
-        const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x00]); // все нули
+        const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x00]);
         await laserCharacteristic.writeValue(data);
         statusDiv.textContent = '🔄 Сброс отправлен!';
         console.log('Команда сброса отправлена:', data);
