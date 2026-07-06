@@ -17,12 +17,17 @@
         .battery { font-weight: bold; color: #28a745; }
         #impulseBtn { background: #ff3b30; }
         #impulseBtn:disabled { background: #ccc; }
+        #piezoBtn { background: #ff9500; }
+        #piezoBtn:disabled { background: #ccc; }
+        #resetBtn { background: #007aff; }
+        #resetBtn:disabled { background: #ccc; }
     </style>
 </head>
 <body>
     <h1>🔦 Управление лазерной насадкой</h1>
     <button id="connectBtn">Подключить</button>
     <button id="impulseBtn" disabled>💥 Импульс</button>
+    <button id="piezoBtn" disabled>📳 Пьезо</button>
     <button id="resetBtn" disabled>🔄 Сброс</button>
     <div id="status">Статус: не подключено</div>
 
@@ -40,6 +45,7 @@
                 <li>ожидание команды (ручное моргание лазером);</li>
             </ul>
             <p><b>При нажатии кнопки "Импульс" насадка испускает лазерный импульс и переходит в режим ожидания команды.</b></p>
+            <p><b>При нажатии кнопки "Пьезо" насадка переходит в режим работы по пьезоэлементу (команда 0x03).</b></p>
             <p><b>При нажатии кнопки "Сброс" насадка переходит в режим работы по пьезоэлементу со следующими настройками:</b></p>
             <ul>
                 <li>Время импульса:10 мс;</li>
