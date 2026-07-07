@@ -63,10 +63,10 @@ sensitivitySlider.addEventListener('input', function() {
     soundThreshold = val / 100;
 });
 
-// Инициализация слайдера
-sensitivitySlider.value = 60;
-sensitivityValue.textContent = '60%';
-soundThreshold = 0.6;
+// Инициализация слайдера – берём значение из HTML (атрибут value)
+const initialSensitivity = parseInt(sensitivitySlider.value, 10) || 100;
+sensitivityValue.textContent = initialSensitivity + '%';
+soundThreshold = initialSensitivity / 100;
 
 // ---------- Подключение кнопок ----------
 connectBtn.addEventListener('click', connectDevice);
