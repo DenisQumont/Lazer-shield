@@ -6,7 +6,6 @@ if ('serviceWorker' in navigator) {
 }
 
 // ---------- UUID ----------
-// DIS
 const DIS_SERVICE = '0000180a-0000-1000-8000-00805f9b34fb';
 const DIS_CHARS = {
     manufacturer: '00002a29-0000-1000-8000-00805f9b34fb',
@@ -15,28 +14,21 @@ const DIS_CHARS = {
     hardware: '00002a27-0000-1000-8000-00805f9b34fb',
     software: '00002a28-0000-1000-8000-00805f9b34fb'
 };
-
-// BAS
 const BATTERY_SERVICE = '0000180f-0000-1000-8000-00805f9b34fb';
 const BATTERY_CHAR = '00002a19-0000-1000-8000-00805f9b34fb';
-
-// Ваш лазерный сервис и характеристика
 const LASER_SERVICE_UUID = '66375178-6231-3937-1258-432199739bcc';
 const LASER_INPUT_UUID   = '78153469-6274-3432-9825-72538293bb02';
-
-// Резервный сервис для серийного номера (ESP32C3)
 const BACKUP_SERVICE_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
 const BACKUP_CHAR_UUID   = '0000ffe2-0000-1000-8000-00805f9b34fb';
-// характеристика для телеметрии
 const LASER_OUTPUT_UUID = '78153469-6274-3432-9825-72538293bb01';
 
 // ---------- Глобальные переменные ----------
 let device = null;
 let server = null;
 let laserCharacteristic = null;
-let isListening = false; // состояние кнопки микрофона
+let isListening = false;
 
-// Переменные для работы с микрофоном
+// Для микрофона
 let audioContext = null;
 let analyser = null;
 let dataArray = null;
@@ -44,21 +36,39 @@ let source = null;
 let stream = null;
 let animationFrame = null;
 let lastCommandTime = 0;
-const SOUND_THRESHOLD = 0.6;      // порог громкости (0-1)
-const COMMAND_COOLDOWN = 500;     // мс между отправками
 
+// Чувствительность (будет обновляться из слайдера)
+let soundThreshold = 0.6; // 60% по умолчанию
+const COMMAND_COOLDOWN = 500; // мс
+
+// DOM элементы
 const connectBtn = document.getElementById('connectBtn');
 const impulseBtn = document.getElementById('impulseBtn');
 const piezoBtn = document.getElementById('piezoBtn');
 const microphoneBtn = document.getElementById('microphoneBtn');
 const resetBtn = document.getElementById('resetBtn');
 const statusDiv = document.getElementById('status');
-
-// Элементы настройки
 const impulseTimeInput = document.getElementById('impulseTimeInput');
 const pauseTimeInput = document.getElementById('pauseTimeInput');
 const updateSettingsBtn = document.getElementById('updateSettingsBtn');
 
+// Слайдер
+const sensitivitySlider = document.getElementById('sensitivitySlider');
+const sensitivityValue = document.getElementById('sensitivityValue');
+
+// Обработчик слайдера
+sensitivitySlider.addEventListener('input', function() {
+    const val = parseInt(this.value, 10);
+    sensitivityValue.textContent = val + '%';
+    soundThreshold = val / 100;
+});
+
+// Инициализация слайдера
+sensitivitySlider.value = 60;
+sensitivityValue.textContent = '60%';
+soundThreshold = 0.6;
+
+// ---------- Подключение кнопок ----------
 connectBtn.addEventListener('click', connectDevice);
 impulseBtn.addEventListener('click', sendImpulse);
 piezoBtn.addEventListener('click', sendPiezo);
@@ -66,7 +76,8 @@ microphoneBtn.addEventListener('click', toggleMicrophone);
 resetBtn.addEventListener('click', sendReset);
 updateSettingsBtn.addEventListener('click', sendSettings);
 
-// ---------- Подключение ----------
+// ---------- Основные функции ----------
+
 async function connectDevice() {
     try {
         device = await navigator.bluetooth.requestDevice({
@@ -84,14 +95,9 @@ async function connectDevice() {
         statusDiv.textContent = `✅ Подключено к ${device.name || 'устройству'}`;
         connectBtn.disabled = true;
 
-        // 1. Читаем DIS (с резервом для серийного номера)
         await readDIS();
-
-        // 2. Читаем BAS
         await readBattery();
         await subscribeBatteryNotifications();
-
-        // 3. Инициализируем управляющую характеристику
         await initLaserCharacteristic();
 
         if (laserCharacteristic) {
@@ -118,7 +124,6 @@ async function connectDevice() {
         microphoneBtn.disabled = true;
         resetBtn.disabled = true;
         updateSettingsBtn.disabled = true;
-        // сбросить состояние микрофона
         if (isListening) {
             await stopListening();
             isListening = false;
@@ -127,7 +132,6 @@ async function connectDevice() {
     }
 }
 
-// ---------- DIS с резервным чтением серийного номера ----------
 async function readDIS() {
     try {
         const service = await server.getPrimaryService(DIS_SERVICE);
@@ -150,7 +154,6 @@ async function readDIS() {
     }
 }
 
-// ---------- Чтение серийного номера из резервного сервиса ----------
 async function readSerialFromBackup() {
     try {
         const service = await server.getPrimaryService(BACKUP_SERVICE_UUID);
@@ -165,7 +168,6 @@ async function readSerialFromBackup() {
     }
 }
 
-// ---------- BAS ----------
 async function readBattery() {
     try {
         const service = await server.getPrimaryService(BATTERY_SERVICE);
@@ -197,13 +199,11 @@ async function subscribeBatteryNotifications() {
     }
 }
 
-// ---------- Лазерная характеристика (управление + телеметрия) ----------
 async function initLaserCharacteristic() {
     try {
         const service = await server.getPrimaryService(LASER_SERVICE_UUID);
         console.log('Сервис найден:', LASER_SERVICE_UUID);
 
-        // ---- 1. Характеристика для отправки команд (INPUT) ----
         const inputChar = await service.getCharacteristic(LASER_INPUT_UUID);
         console.log('INPUT характеристика найдена:', LASER_INPUT_UUID);
         if (inputChar.properties.write || inputChar.properties.writeWithoutResponse) {
@@ -214,11 +214,9 @@ async function initLaserCharacteristic() {
             laserCharacteristic = null;
         }
 
-        // ---- 2. Характеристика для получения телеметрии (OUTPUT) ----
         try {
             const outputChar = await service.getCharacteristic(LASER_OUTPUT_UUID);
             console.log('OUTPUT характеристика найдена:', LASER_OUTPUT_UUID);
-
             if (outputChar.properties.notify) {
                 await outputChar.startNotifications();
                 outputChar.addEventListener('characteristicvaluechanged', (event) => {
@@ -228,22 +226,16 @@ async function initLaserCharacteristic() {
                         const state = data[0];
                         const impulseTime = data[1] | (data[2] << 8);
                         const pauseTime = data[3] | (data[4] << 8);
-
                         document.getElementById('laser-state').textContent =
                             state === 0x07 ? 'Ожидание команды' :
                             state === 0x03 ? 'Работа от пьезоэлемента' :
                             `0x${state.toString(16).padStart(2, '0')}`;
                         document.getElementById('impulse-time').textContent = impulseTime;
                         document.getElementById('pause-time').textContent = pauseTime;
-
                         console.log('Телеметрия:', { state, impulseTime, pauseTime });
-                    } else {
-                        console.warn('Неверный размер данных телеметрии:', value.byteLength);
                     }
                 });
                 console.log('Подписка на телеметрию активна');
-            } else {
-                console.warn('OUTPUT характеристика не поддерживает notify');
             }
         } catch (e) {
             console.warn('Не удалось получить OUTPUT характеристику или подписаться:', e);
@@ -255,13 +247,13 @@ async function initLaserCharacteristic() {
     }
 }
 
-// ---------- Отправка импульса ----------
+// ---------- Команды ----------
+
 async function sendImpulse() {
     if (!laserCharacteristic) {
         alert('Характеристика не инициализирована. Подключитесь заново.');
         return;
     }
-
     try {
         const data = new Uint8Array([0x02, 0x00, 0x00, 0x00, 0x00]);
         await laserCharacteristic.writeValue(data);
@@ -274,13 +266,11 @@ async function sendImpulse() {
     }
 }
 
-// ---------- Отправка команды "Пьезо" ----------
 async function sendPiezo() {
     if (!laserCharacteristic) {
         alert('Характеристика не инициализирована. Подключитесь заново.');
         return;
     }
-
     try {
         const data = new Uint8Array([0x03, 0x00, 0x00, 0x00, 0x00]);
         await laserCharacteristic.writeValue(data);
@@ -293,13 +283,11 @@ async function sendPiezo() {
     }
 }
 
-// ---------- Отправка команды микрофона (аналогично импульсу) ----------
 async function sendMicrophoneCommand() {
     if (!laserCharacteristic) {
         console.warn('Характеристика не инициализирована, команда не отправлена');
         return;
     }
-
     try {
         const data = new Uint8Array([0x02, 0x00, 0x00, 0x00, 0x00]);
         await laserCharacteristic.writeValue(data);
@@ -311,125 +299,11 @@ async function sendMicrophoneCommand() {
     }
 }
 
-// ---------- Запуск прослушивания микрофона ----------
-async function startListening() {
-    try {
-        // Запрашиваем доступ к микрофону
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        source = audioContext.createMediaStreamSource(stream);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        source.connect(analyser);
-        dataArray = new Uint8Array(analyser.fftSize);
-
-        statusDiv.textContent = '🎤 Микрофон активен, ожидание звука...';
-
-        // Запускаем цикл анализа
-        function analyze() {
-            if (!isListening) return; // остановлено пользователем
-            analyser.getByteTimeDomainData(dataArray);
-            // Вычисляем RMS (среднеквадратичное) или просто максимум
-            let max = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                const val = (dataArray[i] - 128) / 128; // нормализация от -1 до 1
-                const abs = Math.abs(val);
-                if (abs > max) max = abs;
-            }
-            // Если громкость превышает порог
-            if (max > SOUND_THRESHOLD) {
-                const now = Date.now();
-                if (now - lastCommandTime > COMMAND_COOLDOWN) {
-                    lastCommandTime = now;
-                    sendMicrophoneCommand();
-                }
-            }
-            // Продолжаем анализ
-            animationFrame = requestAnimationFrame(analyze);
-        }
-        analyze();
-
-        console.log('Микрофон запущен');
-    } catch (error) {
-        console.error('Ошибка доступа к микрофону:', error);
-        alert('Не удалось получить доступ к микрофону. Разрешите доступ и попробуйте снова.');
-        // Отключаем режим прослушивания
-        await stopListening();
-        isListening = false;
-        microphoneBtn.textContent = '🎤 Микрофон';
-        // Разблокируем остальные кнопки (если характеристика есть)
-        if (laserCharacteristic) {
-            impulseBtn.disabled = false;
-            piezoBtn.disabled = false;
-            resetBtn.disabled = false;
-            updateSettingsBtn.disabled = false;
-        }
-        statusDiv.textContent = '❌ Ошибка доступа к микрофону';
-    }
-}
-
-// ---------- Остановка прослушивания микрофона ----------
-async function stopListening() {
-    // Останавливаем цикл анализа
-    if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-        animationFrame = null;
-    }
-    // Останавливаем аудиопоток
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
-    // Закрываем аудиоконтекст
-    if (audioContext) {
-        await audioContext.close();
-        audioContext = null;
-    }
-    analyser = null;
-    source = null;
-    dataArray = null;
-    console.log('Микрофон остановлен');
-    statusDiv.textContent = '🎤 Микрофон отключён';
-}
-
-// ---------- Переключение режима микрофона ----------
-function toggleMicrophone() {
-    if (isListening) {
-        // Выключение режима прослушивания
-        isListening = false;
-        microphoneBtn.textContent = '🎤 Микрофон';
-        // Включаем остальные кнопки (если характеристика есть)
-        if (laserCharacteristic) {
-            impulseBtn.disabled = false;
-            piezoBtn.disabled = false;
-            resetBtn.disabled = false;
-            updateSettingsBtn.disabled = false;
-        }
-        // Останавливаем микрофон
-        stopListening();
-    } else {
-        // Включение режима прослушивания
-        isListening = true;
-        microphoneBtn.textContent = '🎤 Прослушивание';
-        // Отключаем остальные кнопки
-        impulseBtn.disabled = true;
-        piezoBtn.disabled = true;
-        resetBtn.disabled = true;
-        updateSettingsBtn.disabled = true;
-        // Отправляем команду 0x02 (один раз при старте)
-        sendMicrophoneCommand();
-        // Запускаем микрофон
-        startListening();
-    }
-}
-
-// ---------- Сброс настроек ----------
 async function sendReset() {
     if (!laserCharacteristic) {
         alert('Характеристика не инициализирована. Подключитесь заново.');
         return;
     }
-
     try {
         const data = new Uint8Array([0x00, 0x00, 0x00, 0x00, 0x00]);
         await laserCharacteristic.writeValue(data);
@@ -442,30 +316,23 @@ async function sendReset() {
     }
 }
 
-// ---------- Отправка настроек ----------
 async function sendSettings() {
     if (!laserCharacteristic) {
         alert('Характеристика не инициализирована. Подключитесь заново.');
         return;
     }
-
-    // Получаем и проверяем значения
     let impulseTime = parseInt(impulseTimeInput.value.trim(), 10);
     let pauseTime = parseInt(pauseTimeInput.value.trim(), 10);
-
     if (isNaN(impulseTime) || isNaN(pauseTime) || impulseTime < 1 || impulseTime > 5000 || pauseTime < 1 || pauseTime > 5000) {
         alert('Введите целые числа от 1 до 5000 для обоих полей.');
         return;
     }
-
-    // Формируем пакет (5 байт)
     const data = new Uint8Array(5);
     data[0] = 0x01;
     data[1] = impulseTime & 0xFF;
     data[2] = (impulseTime >> 8) & 0xFF;
     data[3] = pauseTime & 0xFF;
     data[4] = (pauseTime >> 8) & 0xFF;
-
     try {
         await laserCharacteristic.writeValue(data);
         statusDiv.textContent = '✅ Настройки обновлены!';
@@ -474,5 +341,98 @@ async function sendSettings() {
         console.error('Ошибка записи настроек:', error);
         alert('Ошибка при отправке настроек: ' + error.message);
         statusDiv.textContent = '❌ Ошибка обновления настроек';
+    }
+}
+
+// ---------- Микрофон ----------
+
+async function startListening() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        dataArray = new Uint8Array(analyser.fftSize);
+
+        statusDiv.textContent = '🎤 Микрофон активен, ожидание звука...';
+
+        function analyze() {
+            if (!isListening) return;
+            analyser.getByteTimeDomainData(dataArray);
+            let max = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const val = (dataArray[i] - 128) / 128;
+                const abs = Math.abs(val);
+                if (abs > max) max = abs;
+            }
+            if (max > soundThreshold) {
+                const now = Date.now();
+                if (now - lastCommandTime > COMMAND_COOLDOWN) {
+                    lastCommandTime = now;
+                    sendMicrophoneCommand();
+                }
+            }
+            animationFrame = requestAnimationFrame(analyze);
+        }
+        analyze();
+        console.log('Микрофон запущен');
+    } catch (error) {
+        console.error('Ошибка доступа к микрофону:', error);
+        alert('Не удалось получить доступ к микрофону. Разрешите доступ и попробуйте снова.');
+        await stopListening();
+        isListening = false;
+        microphoneBtn.textContent = '🎤 Микрофон';
+        if (laserCharacteristic) {
+            impulseBtn.disabled = false;
+            piezoBtn.disabled = false;
+            resetBtn.disabled = false;
+            updateSettingsBtn.disabled = false;
+        }
+        statusDiv.textContent = '❌ Ошибка доступа к микрофону';
+    }
+}
+
+async function stopListening() {
+    if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+    }
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    if (audioContext) {
+        await audioContext.close();
+        audioContext = null;
+    }
+    analyser = null;
+    source = null;
+    dataArray = null;
+    console.log('Микрофон остановлен');
+    statusDiv.textContent = '🎤 Микрофон отключён';
+}
+
+function toggleMicrophone() {
+    if (isListening) {
+        isListening = false;
+        microphoneBtn.textContent = '🎤 Микрофон';
+        if (laserCharacteristic) {
+            impulseBtn.disabled = false;
+            piezoBtn.disabled = false;
+            resetBtn.disabled = false;
+            updateSettingsBtn.disabled = false;
+        }
+        stopListening();
+    } else {
+        isListening = true;
+        microphoneBtn.textContent = '🎤 Прослушивание';
+        impulseBtn.disabled = true;
+        piezoBtn.disabled = true;
+        resetBtn.disabled = true;
+        updateSettingsBtn.disabled = true;
+        sendMicrophoneCommand();
+        startListening();
     }
 }

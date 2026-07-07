@@ -7,93 +7,277 @@
     <link rel="icon" type="image/png" href="icons/icon-192.png">
     <title>Управление лазерной насадкой</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; padding: 16px; max-width: 600px; margin: auto; background: #f8f9fa; }
-        h1 { font-size: 1.8rem; }
-        button { font-size: 1.2rem; padding: 12px 24px; margin: 8px 4px; border: none; border-radius: 8px; background: #007aff; color: white; cursor: pointer; }
-        button:disabled { opacity: 0.5; }
-        #status { margin: 12px 0; padding: 8px; background: #e9ecef; border-radius: 6px; }
-        .info-block { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 16px; }
-        .info-block p { margin: 6px 0; }
-        .battery { font-weight: bold; color: #28a745; }
-        #impulseBtn { background: #ff3b30; }
-        #impulseBtn:disabled { background: #ccc; }
-        #piezoBtn { background: #ff9500; }
-        #piezoBtn:disabled { background: #ccc; }
-        #microphoneBtn { background: #34c759; }
-        #microphoneBtn:disabled { background: #ccc; }
-        #resetBtn { background: #007aff; }
-        #resetBtn:disabled { background: #ccc; }
+        /* Общие стили */
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 16px;
+            max-width: 600px;
+            margin: auto;
+            background: #f0f4f8;
+            color: #1e293b;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button {
+            font-size: 1.1rem;
+            padding: 12px 20px;
+            margin: 6px 4px;
+            border: none;
+            border-radius: 10px;
+            background: #3b82f6;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #status {
+            margin: 12px 0;
+            padding: 10px 14px;
+            background: #e2e8f0;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .info-block {
+            background: white;
+            padding: 18px 20px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            margin-top: 18px;
+        }
+
+        .info-block h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-block p {
+            margin: 8px 0;
+        }
+
+        .battery {
+            font-weight: bold;
+            color: #22c55e;
+        }
+
+        #impulseBtn { background: #ef4444; }
+        #piezoBtn { background: #f59e0b; }
+        #microphoneBtn { background: #22c55e; }
+        #resetBtn { background: #3b82f6; }
+        #updateSettingsBtn { background: #8b5cf6; }
+
+        /* Улучшенная инструкция */
+        .manual {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px 20px;
+            border-left: 4px solid #3b82f6;
+            margin: 8px 0;
+        }
+
+        .manual p {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+
+        .manual ul {
+            padding-left: 24px;
+            margin: 8px 0 12px;
+        }
+
+        .manual ul li {
+            margin: 6px 0;
+            list-style-type: disc;
+        }
+
+        .manual b {
+            color: #0f172a;
+        }
+
+        details {
+            margin-top: 12px;
+            cursor: pointer;
+        }
+
+        details summary {
+            font-weight: 600;
+            color: #3b82f6;
+            padding: 6px 0;
+            font-size: 1.05rem;
+        }
+
+        /* Слайдер */
+        .slider-container {
+            margin: 16px 0 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .slider-container label {
+            font-weight: 500;
+            min-width: 160px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            min-width: 120px;
+            height: 6px;
+            border-radius: 4px;
+            background: #cbd5e1;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(59,130,246,0.4);
+        }
+
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+        }
+
+        .sensitivity-value {
+            font-weight: 600;
+            color: #0f172a;
+            min-width: 48px;
+            text-align: right;
+        }
+
+        @media (max-width: 500px) {
+            button {
+                width: 100%;
+                margin: 4px 0;
+            }
+            .slider-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .slider-container label {
+                min-width: auto;
+            }
+        }
     </style>
 </head>
 <body>
     <h1>🔦 Управление лазерной насадкой</h1>
-    <button id="connectBtn">Подключить</button>
-    <button id="impulseBtn" disabled>💥 Импульс</button>
-    <button id="piezoBtn" disabled>📳 Пьезо</button>
-    <button id="microphoneBtn" disabled>🎤 Микрофон</button>
-    <button id="resetBtn" disabled>🔄 Сброс</button>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+        <button id="connectBtn">Подключить</button>
+        <button id="impulseBtn" disabled>💥 Импульс</button>
+        <button id="piezoBtn" disabled>📳 Пьезо</button>
+        <button id="microphoneBtn" disabled>🎤 Микрофон</button>
+        <button id="resetBtn" disabled>🔄 Сброс</button>
+    </div>
+
     <div id="status">Статус: не подключено</div>
 
     <div class="info-block">
         <h3>🔋 Уровень заряда батареи</h3>
         <p><span class="battery" id="battery-level">—</span>%</p>
     </div>
-    &nbsp;&nbsp;&nbsp;
+
     <details>
-        <summary>📖 Инструкция по работе с приложением (нажмите, чтобы развернуть)</summary>
+        <summary>📖 Инструкция по работе с приложением</summary>
         <div class="manual">
             <p><b>Лазерная насадка работает в 2 режимах:</b></p>
             <ul>
                 <li>детектирование по пьезоэлементу;</li>
                 <li>ожидание команды (ручное моргание лазером);</li>
             </ul>
-            <p>При нажатии кнопки "Импульс" насадка испускает лазерный импульс и переходит в режим ожидания команды.</p>
-            <p>При нажатии кнопки "Пьезо" насадка переходит в режим работы по пьезоэлементу (команда 0x03).</p>
-            <p><b>При нажатии кнопки "Сброс" насадка переходит в режим работы по пьезоэлементу со следующими настройками:</b></p>
+            <p>При нажатии кнопки <b>"Импульс"</b> насадка испускает лазерный импульс и переходит в режим ожидания команды.</p>
+            <p>При нажатии кнопки <b>"Пьезо"</b> насадка переходит в режим работы по пьезоэлементу (команда 0x03).</p>
+            <p><b>При нажатии кнопки "Сброс"</b> насадка переходит в режим работы по пьезоэлементу со следующими настройками:</p>
             <ul>
-                <li>Время импульса:100 мс;</li>
-                <li>Время паузы:1000 мс;</li>
+                <li>Время импульса: 100 мс;</li>
+                <li>Время паузы: 1000 мс.</li>
             </ul>
             <p>В блоке телеметрии отображены текущие настройки насадки.</p>
-            <p>Чтобы обновить настройки насадки(время импульса/паузы)  необходимо заполнить поля в блоке "Настройка" и нажать кнопку "Обновить настройки".</p>
+            <p>Чтобы обновить настройки насадки (время импульса/паузы), необходимо заполнить поля в блоке <b>"Настройка"</b> и нажать кнопку <b>"Обновить настройки"</b>.</p>
             <p>При обновлении настроек насадка автоматически переходит в режим работы по пьезоэлементу.</p>
-            <p>При включении Микрофона (функция находится в разработке) насадка переходит в режим ожидания команды с испусканием лазерного импульса с текущими настройками.</p>
+            <p>При включении кнопки <b>"Микрофон"</b> насадка переходит в режим ожидания команды с испусканием лазерного импульса с текущими настройками.</p>
+            <p>Лазерный импульс испускается при детектировании громкого звука микрофоном смартфона.</p>
+            <p>При повторном нажатии <b>"Микрофон"</b> в режиме «Прослушивание» в приложении отключается микрофон.</p>
         </div>
     </details>
-    &nbsp;&nbsp;
-  <div class="info-block">
-    <h3>📊 Телеметрия лазерной насадки</h3>
-    <p><b>Состояние:</b> <span id="laser-state">—</span></p>
-    <p><b>Текущее время импульса:</b> <span id="impulse-time">—</span> мс</p>
-    <p><b>Текущее время паузы:</b> <span id="pause-time">—</span> мс</p>
-</div>
 
-<div class="info-block">
-    <h3>⚙️ Настройка</h3>
-    <p>
-        <label>Время импульса (мс): 
-            <input type="number" id="impulseTimeInput" min="1" max="5000" step="1" value="100">
-        </label>
-    </p>
-    <p>
-        <label>Время паузы (мс): 
-            <input type="number" id="pauseTimeInput" min="1" max="5000" step="1" value="1000">
-        </label>
-    </p>
-    <button id="updateSettingsBtn" disabled>Обновить настройки</button>
-</div>
-&nbsp;&nbsp;&nbsp;
-<details>
-    <summary>📋 Информация об устройстве (нажмите, чтобы развернуть)</summary>
-      <div class="info-block">
-          <p><b>Производитель:</b> <span id="manufacturer">—</span></p>
-          <p><b>Серийный номер:</b> <span id="serial">—</span></p>
-          <p><b>Версия прошивки:</b> <span id="firmware">—</span></p>
-          <p><b>Версия насадки:</b> <span id="hardware">—</span></p>
-          <p><b>Версия ПО:</b> <span id="software">—</span></p>
-      </div>
+    <div class="info-block">
+        <h3>📊 Телеметрия лазерной насадки</h3>
+        <p><b>Состояние:</b> <span id="laser-state">—</span></p>
+        <p><b>Текущее время импульса:</b> <span id="impulse-time">—</span> мс</p>
+        <p><b>Текущее время паузы:</b> <span id="pause-time">—</span> мс</p>
+    </div>
+
+    <div class="info-block">
+        <h3>⚙️ Настройка</h3>
+        <p>
+            <label>Время импульса (мс):
+                <input type="number" id="impulseTimeInput" min="1" max="5000" step="1" value="100">
+            </label>
+        </p>
+        <p>
+            <label>Время паузы (мс):
+                <input type="number" id="pauseTimeInput" min="1" max="5000" step="1" value="1000">
+            </label>
+        </p>
+        <button id="updateSettingsBtn" disabled>Обновить настройки</button>
+
+        <!-- Слайдер чувствительности микрофона -->
+        <div class="slider-container">
+            <label for="sensitivitySlider">Чувствительность микрофона</label>
+            <input type="range" id="sensitivitySlider" min="0" max="100" value="60" step="1">
+            <span class="sensitivity-value" id="sensitivityValue">60%</span>
+        </div>
+        <p style="font-size: 0.9rem; color: #64748b; margin-top: 4px;">Чем выше значение, тем тише звук будет активировать лазер.</p>
+    </div>
+
+    <details>
+        <summary>📋 Информация об устройстве</summary>
+        <div class="info-block">
+            <p><b>Производитель:</b> <span id="manufacturer">—</span></p>
+            <p><b>Серийный номер:</b> <span id="serial">—</span></p>
+            <p><b>Версия прошивки:</b> <span id="firmware">—</span></p>
+            <p><b>Версия насадки:</b> <span id="hardware">—</span></p>
+            <p><b>Версия ПО:</b> <span id="software">—</span></p>
+        </div>
     </details>
 
+    <!-- Подключаем внешний JavaScript -->
     <script src="script.js"></script>
 </body>
 </html>
