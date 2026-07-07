@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_VERSION = 'v19'; 
+const CACHE_VERSION = 'v20'; 
 const CACHE_NAME = `lazer-cache-${CACHE_VERSION}`;
 const urlsToCache = [
     '/Lazer-shield/',
